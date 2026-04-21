@@ -522,6 +522,12 @@ INSERT IGNORE INTO hr_roles (id,name) VALUES
 INSERT IGNORE INTO hr_departments (id,name) VALUES
 (1,'Human Resources'),(2,'Finance'),(3,'Engineering'),(4,'Sales'),(5,'Operations');
 
+INSERT IGNORE INTO hr_leave_types (id, name, annual_quota, carry_forward_limit, requires_attachment, is_active) VALUES
+(1,'Annual',14,7,0,1),
+(2,'Sick',14,0,0,1),
+(3,'Emergency',7,0,0,1),
+(4,'Maternity/Paternity',60,0,1,1);
+
 INSERT IGNORE INTO hr_permissions (id,module_key,action_key,description) VALUES
 (1,'employee','view','View employee profiles'),
 (2,'employee','manage','Create/update employee records'),

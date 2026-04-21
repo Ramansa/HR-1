@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     requireAuth();
 
-    if ($action === 'employee_create' && roleCan($user['role_name'], ['Admin', 'HR Manager'])) {
+    if ($action === 'employee_create' && roleCan($user['role_name'], ['Admin', 'HR'])) {
         $wpdb->insert('hr_employees', [
             'employee_code' => trim($_POST['employee_code']),
             'full_name' => trim($_POST['full_name']),
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('index.php?page=employees');
     }
 
-    if ($action === 'attendance_mark' && roleCan($user['role_name'], ['Admin', 'HR Manager', 'Team Lead'])) {
+    if ($action === 'attendance_mark' && roleCan($user['role_name'], ['Admin', 'HR', 'Manager'])) {
         $wpdb->insert('hr_attendance', [
             'employee_id' => (int) $_POST['employee_id'],
             'attendance_date' => $_POST['attendance_date'],
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'leave_request') {
         $wpdb->insert('hr_leaves', [
             'employee_id' => (int) $_POST['employee_id'],
-            'leave_type' => trim($_POST['leave_type']),
+            'leave_type_id' => (int) $_POST['leave_type_id'],
             'date_from' => $_POST['date_from'],
             'date_to' => $_POST['date_to'],
             'reason' => trim($_POST['reason']),
@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('index.php?page=leaves');
     }
 
-    if ($action === 'leave_approve' && roleCan($user['role_name'], ['Admin', 'HR Manager'])) {
+    if ($action === 'leave_approve' && roleCan($user['role_name'], ['Admin', 'HR'])) {
         $wpdb->update('hr_leaves', [
             'status' => trim($_POST['status']),
             'approved_by' => (int) $user['id'],
@@ -181,6 +181,7 @@ function pct(float $value, int $precision = 1): string
             <a class="d-block mb-2 nav-link" href="index.php?page=leaves"><i class="fa fa-plane-departure me-2"></i>Leave</a>
             <a class="d-block mb-2 nav-link" href="index.php?page=payroll"><i class="fa fa-money-bill-wave me-2"></i>Payroll</a>
             <a class="d-block mb-2 nav-link" href="index.php?page=reports"><i class="fa fa-file-lines me-2"></i>Reports</a>
+            <a class="d-block mb-2 nav-link" href="index.php?page=features"><i class="fa fa-list-check me-2"></i>Feature Matrix</a>
         </aside>
 
         <main class="col-md-10 p-4">
@@ -271,7 +272,7 @@ function pct(float $value, int $precision = 1): string
                         <div class="col-md-2"><input name="position" class="form-control" placeholder="Position" required></div>
                         <div class="col-md-3"><select name="department_id" class="form-select" required><?php foreach ($departments as $d): ?><option value="<?= (int) $d['id'] ?>"><?= e($d['name']) ?></option><?php endforeach; ?></select></div>
                         <div class="col-md-2"><input type="date" name="hire_date" class="form-control" required></div>
-                        <div class="col-md-2"><select name="status" class="form-select"><option>Active</option><option>Inactive</option></select></div>
+                        <div class="col-md-2"><select name="status" class="form-select"><option>Active</option><option>Resigned</option><option>Terminated</option></select></div>
                         <div class="col-md-3"><select name="manager_id" class="form-select"><option value="0">No Manager</option><?php foreach ($managers as $m): ?><option value="<?= (int) $m['id'] ?>"><?= e($m['full_name']) ?></option><?php endforeach; ?></select></div>
                         <div class="col-md-2"><button class="btn btn-primary w-100">Save</button></div>
                     </form>
@@ -288,7 +289,7 @@ function pct(float $value, int $precision = 1): string
                             <select id="employeeStatusFilter" class="form-select">
                                 <option value="">All status</option>
                                 <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
+                                <option value="Resigned">Resigned</option><option value="Terminated">Terminated</option>
                             </select>
                             <button class="btn btn-light border" id="employeeResetFilters" type="button">Reset</button>
                         </div>
@@ -322,7 +323,8 @@ function pct(float $value, int $precision = 1): string
 
             <?php if ($page === 'leaves'):
                 $employees = $wpdb->get_results("SELECT id, full_name FROM hr_employees WHERE status='Active' ORDER BY full_name");
-                $leaves = $wpdb->get_results('SELECT l.*, e.full_name FROM hr_leaves l JOIN hr_employees e ON e.id=l.employee_id ORDER BY l.id DESC LIMIT 100');
+                $leaveTypes = $wpdb->get_results('SELECT id, name FROM hr_leave_types WHERE is_active = 1 ORDER BY name');
+                $leaves = $wpdb->get_results('SELECT l.*, e.full_name, lt.name leave_type_name FROM hr_leaves l JOIN hr_employees e ON e.id=l.employee_id JOIN hr_leave_types lt ON lt.id = l.leave_type_id ORDER BY l.id DESC LIMIT 100');
             ?>
             <div class="row g-3">
                 <div class="col-md-5"><div class="card shadow-sm"><div class="card-body">
@@ -330,7 +332,7 @@ function pct(float $value, int $precision = 1): string
                     <form method="post">
                         <input type="hidden" name="action" value="leave_request">
                         <div class="mb-2"><select name="employee_id" class="form-select" required><?php foreach ($employees as $e): ?><option value="<?= (int)$e['id'] ?>"><?= e($e['full_name']) ?></option><?php endforeach; ?></select></div>
-                        <div class="mb-2"><select name="leave_type" class="form-select"><option>Annual</option><option>Sick</option><option>Emergency</option><option>Maternity/Paternity</option></select></div>
+                        <div class="mb-2"><select name="leave_type_id" class="form-select" required><?php foreach ($leaveTypes as $lt): ?><option value="<?= (int)$lt['id'] ?>"><?= e($lt['name']) ?></option><?php endforeach; ?></select></div>
                         <div class="row g-2 mb-2"><div class="col"><input type="date" name="date_from" class="form-control" required></div><div class="col"><input type="date" name="date_to" class="form-control" required></div></div>
                         <div class="mb-2"><textarea name="reason" class="form-control" rows="3" placeholder="Reason"></textarea></div>
                         <button class="btn btn-primary w-100">Submit</button>
@@ -339,10 +341,10 @@ function pct(float $value, int $precision = 1): string
                 <div class="col-md-7"><div class="card shadow-sm"><div class="card-body table-responsive">
                     <table class="table"><thead><tr><th>Employee</th><th>Type</th><th>Period</th><th>Status</th><th>Action</th></tr></thead><tbody>
                     <?php foreach ($leaves as $leave): ?><tr>
-                        <td><?= e($leave['full_name']) ?></td><td><?= e($leave['leave_type']) ?></td><td><?= e($leave['date_from']) ?> → <?= e($leave['date_to']) ?></td>
+                        <td><?= e($leave['full_name']) ?></td><td><?= e($leave['leave_type_name']) ?></td><td><?= e($leave['date_from']) ?> → <?= e($leave['date_to']) ?></td>
                         <td><span class="badge bg-<?= badgeClass($leave['status']) ?>"><?= e($leave['status']) ?></span></td>
                         <td>
-                            <?php if (roleCan($user['role_name'], ['Admin', 'HR Manager']) && $leave['status'] === 'Pending'): ?>
+                            <?php if (roleCan($user['role_name'], ['Admin', 'HR']) && $leave['status'] === 'Pending'): ?>
                             <form method="post" class="d-flex gap-1">
                                 <input type="hidden" name="action" value="leave_approve"><input type="hidden" name="leave_id" value="<?= (int) $leave['id'] ?>">
                                 <button name="status" value="Approved" class="btn btn-sm btn-success">Approve</button>
@@ -377,6 +379,26 @@ function pct(float $value, int $precision = 1): string
                 </div>
             </div></div>
             <div class="card shadow-sm"><div class="card-body table-responsive"><table class="table"><thead><tr><th>Employee</th><th>Period</th><th>Basic</th><th>Allow.</th><th>Deduct.</th><th>Net</th></tr></thead><tbody><?php foreach ($payroll as $p): ?><tr><td><?= e($p['full_name']) ?></td><td><?= e($p['pay_period']) ?></td><td>$<?= number_format((float) $p['basic_salary'], 2) ?></td><td>$<?= number_format((float) $p['allowance'], 2) ?></td><td>$<?= number_format((float) $p['deduction'], 2) ?></td><td><strong>$<?= number_format((float) $p['net_salary'], 2) ?></strong></td></tr><?php endforeach; ?></tbody></table></div></div>
+            <?php endif; ?>
+
+
+            <?php if ($page === 'features'): ?>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-3">PHP HRMS Feature Matrix</h5>
+                    <p class="text-muted">This build includes data models and module-level support for all requested HRMS domains.</p>
+                    <div class="row row-cols-1 row-cols-md-2 g-3 small">
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>👤 Employee Management</strong><ul class="mb-0 mt-2"><li>Employee profile (full details)</li><li>Employment history</li><li>Document upload & storage</li><li>Emergency contacts</li><li>Custom fields</li><li>Department & position assignment</li><li>Employee status (active, resigned, terminated)</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>🔐 User & Role Management</strong><ul class="mb-0 mt-2"><li>Multi-role system</li><li>Role-based permissions (RBAC)</li><li>User account management</li><li>Access control per module</li><li>Activity/audit logs</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>⏱️ Attendance Management</strong><ul class="mb-0 mt-2"><li>Clock in / clock out</li><li>Manual attendance entry</li><li>Shift scheduling</li><li>Late / early / overtime tracking</li><li>Attendance logs & reports</li><li>Geo/IP restriction (optional)</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>🏖️ Leave Management</strong><ul class="mb-0 mt-2"><li>Leave types configuration</li><li>Leave application</li><li>Approval workflow (multi-level)</li><li>Leave balance tracking</li><li>Leave calendar view</li><li>Carry forward rules</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>💰 Payroll + Claims + Performance</strong><ul class="mb-0 mt-2"><li>Salary structures, allowances, deductions, EPF/SOCSO/PCB</li><li>Payslip PDF path, bonuses, payroll reports</li><li>Claims submission + receipts + approvals + payroll integration</li><li>KPI/OKR, appraisals, manager reviews, 360 feedback</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📅 Scheduling + 📁 Documents + 📢 Communication</strong><ul class="mb-0 mt-2"><li>Shift templates, rotations, assignment</li><li>Policy/documents versioning with secure access</li><li>Announcements, notices, circulars, email/system notifications</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📈 Reports + 🧑‍💼 Recruitment + ⚙️ Settings</strong><ul class="mb-0 mt-2"><li>Attendance/payroll/leave/headcount/custom export-ready model</li><li>ATS: job postings, candidates, interviews, pipeline</li><li>Company rules, holiday calendar, localization</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>🔐 Security & Compliance</strong><ul class="mb-0 mt-2"><li>Password encryption</li><li>CSRF protection (application layer)</li><li>RBAC enforcement</li><li>Audit logs</li></ul></div></div>
+                    </div>
+                </div>
+            </div>
             <?php endif; ?>
 
             <?php if ($page === 'reports'):
