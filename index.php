@@ -19,6 +19,11 @@ if ($page === 'logout') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrf($_POST['csrf_token'] ?? null)) {
+        flash('Invalid security token. Please refresh the page and try again.', 'danger');
+        redirect('index.php?page=' . urlencode((string) $page));
+    }
+
     $action = $_POST['action'] ?? '';
 
     if ($action === 'login') {
@@ -142,6 +147,7 @@ function pct(float $value, int $precision = 1): string
                         <div class="alert alert-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
                     <?php endif; ?>
                     <form method="post">
+                        <?= csrfField() ?>
                         <input type="hidden" name="action" value="login">
                         <div class="mb-3">
                             <label class="form-label">Email</label>
@@ -263,8 +269,9 @@ function pct(float $value, int $precision = 1): string
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-white"><h5 class="mb-0">Add Employee</h5></div>
                 <div class="card-body">
-                    <form method="post" class="row g-2">
-                        <input type="hidden" name="action" value="employee_create">
+                <form method="post" class="row g-2">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="employee_create">
                         <div class="col-md-2"><input name="employee_code" class="form-control" placeholder="EMP1001" required></div>
                         <div class="col-md-3"><input name="full_name" class="form-control" placeholder="Full name" required></div>
                         <div class="col-md-3"><input name="email" type="email" class="form-control" placeholder="Email" required></div>
@@ -309,6 +316,7 @@ function pct(float $value, int $precision = 1): string
             ?>
             <div class="card shadow-sm mb-3"><div class="card-body">
                 <form method="post" class="row g-2">
+                    <?= csrfField() ?>
                     <input type="hidden" name="action" value="attendance_mark">
                     <div class="col-md-3"><select name="employee_id" class="form-select" required><?php foreach ($employees as $emp): ?><option value="<?= (int)$emp['id'] ?>"><?= e($emp['full_name']) ?></option><?php endforeach; ?></select></div>
                     <div class="col-md-2"><input type="date" name="attendance_date" class="form-control" required></div>
@@ -330,6 +338,7 @@ function pct(float $value, int $precision = 1): string
                 <div class="col-md-5"><div class="card shadow-sm"><div class="card-body">
                     <h5>Request Leave</h5>
                     <form method="post">
+                        <?= csrfField() ?>
                         <input type="hidden" name="action" value="leave_request">
                         <div class="mb-2"><select name="employee_id" class="form-select" required><?php foreach ($employees as $e): ?><option value="<?= (int)$e['id'] ?>"><?= e($e['full_name']) ?></option><?php endforeach; ?></select></div>
                         <div class="mb-2"><select name="leave_type_id" class="form-select" required><?php foreach ($leaveTypes as $lt): ?><option value="<?= (int)$lt['id'] ?>"><?= e($lt['name']) ?></option><?php endforeach; ?></select></div>
@@ -346,6 +355,7 @@ function pct(float $value, int $precision = 1): string
                         <td>
                             <?php if (roleCan($user['role_name'], ['Admin', 'HR']) && $leave['status'] === 'Pending'): ?>
                             <form method="post" class="d-flex gap-1">
+                                <?= csrfField() ?>
                                 <input type="hidden" name="action" value="leave_approve"><input type="hidden" name="leave_id" value="<?= (int) $leave['id'] ?>">
                                 <button name="status" value="Approved" class="btn btn-sm btn-success">Approve</button>
                                 <button name="status" value="Rejected" class="btn btn-sm btn-danger">Reject</button>
@@ -366,6 +376,7 @@ function pct(float $value, int $precision = 1): string
             <div class="card shadow-sm mb-3"><div class="card-body">
                 <h5>Add Payroll</h5>
                 <form method="post" class="row g-2">
+                    <?= csrfField() ?>
                     <input type="hidden" name="action" value="payroll_add">
                     <div class="col-md-3"><select name="employee_id" class="form-select" required><?php foreach ($employees as $e): ?><option value="<?= (int)$e['id'] ?>"><?= e($e['full_name']) ?></option><?php endforeach; ?></select></div>
                     <div class="col-md-2"><input type="month" name="pay_period" class="form-control" required></div>
@@ -392,9 +403,16 @@ function pct(float $value, int $precision = 1): string
                         <div class="col"><div class="border rounded p-3 h-100"><strong>🔐 User & Role Management</strong><ul class="mb-0 mt-2"><li>Multi-role system</li><li>Role-based permissions (RBAC)</li><li>User account management</li><li>Access control per module</li><li>Activity/audit logs</li></ul></div></div>
                         <div class="col"><div class="border rounded p-3 h-100"><strong>⏱️ Attendance Management</strong><ul class="mb-0 mt-2"><li>Clock in / clock out</li><li>Manual attendance entry</li><li>Shift scheduling</li><li>Late / early / overtime tracking</li><li>Attendance logs & reports</li><li>Geo/IP restriction (optional)</li></ul></div></div>
                         <div class="col"><div class="border rounded p-3 h-100"><strong>🏖️ Leave Management</strong><ul class="mb-0 mt-2"><li>Leave types configuration</li><li>Leave application</li><li>Approval workflow (multi-level)</li><li>Leave balance tracking</li><li>Leave calendar view</li><li>Carry forward rules</li></ul></div></div>
-                        <div class="col"><div class="border rounded p-3 h-100"><strong>💰 Payroll + Claims + Performance</strong><ul class="mb-0 mt-2"><li>Salary structures, allowances, deductions, EPF/SOCSO/PCB</li><li>Payslip PDF path, bonuses, payroll reports</li><li>Claims submission + receipts + approvals + payroll integration</li><li>KPI/OKR, appraisals, manager reviews, 360 feedback</li></ul></div></div>
-                        <div class="col"><div class="border rounded p-3 h-100"><strong>📅 Scheduling + 📁 Documents + 📢 Communication</strong><ul class="mb-0 mt-2"><li>Shift templates, rotations, assignment</li><li>Policy/documents versioning with secure access</li><li>Announcements, notices, circulars, email/system notifications</li></ul></div></div>
-                        <div class="col"><div class="border rounded p-3 h-100"><strong>📈 Reports + 🧑‍💼 Recruitment + ⚙️ Settings</strong><ul class="mb-0 mt-2"><li>Attendance/payroll/leave/headcount/custom export-ready model</li><li>ATS: job postings, candidates, interviews, pipeline</li><li>Company rules, holiday calendar, localization</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>💰 Payroll Management</strong><ul class="mb-0 mt-2"><li>Salary structure setup</li><li>Allowances & deductions</li><li>EPF / SOCSO / PCB calculation</li><li>Payslip generation (PDF)</li><li>Bonus & incentives</li><li>Payroll reports</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>🧾 Claims & Reimbursement</strong><ul class="mb-0 mt-2"><li>Expense submission</li><li>Receipt upload</li><li>Approval workflow</li><li>Claims tracking</li><li>Payroll integration</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📊 Performance Management</strong><ul class="mb-0 mt-2"><li>KPI / OKR setup</li><li>Employee evaluations</li><li>Appraisal cycles</li><li>Manager reviews</li><li>360-degree feedback</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📅 Scheduling & Shifts</strong><ul class="mb-0 mt-2"><li>Shift templates</li><li>Rotating schedules</li><li>Department-based scheduling</li><li>Shift assignment</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📁 Document Management</strong><ul class="mb-0 mt-2"><li>Company policy storage</li><li>Employee documents</li><li>File versioning</li><li>Secure access control</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📢 Communication</strong><ul class="mb-0 mt-2"><li>Company announcements</li><li>Department notices</li><li>HR circulars</li><li>Notification system (email/system)</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>📈 Reports & Analytics</strong><ul class="mb-0 mt-2"><li>Attendance reports</li><li>Payroll reports</li><li>Leave reports</li><li>Employee headcount</li><li>Custom report export (CSV/PDF)</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>🧑‍💼 Recruitment (ATS)</strong><ul class="mb-0 mt-2"><li>Job posting</li><li>Candidate management</li><li>Interview scheduling</li><li>Hiring pipeline tracking</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>⚙️ System Settings</strong><ul class="mb-0 mt-2"><li>Company settings</li><li>Leave & payroll rules</li><li>Holiday calendar</li><li>Localization (currency, timezone)</li></ul></div></div>
+                        <div class="col"><div class="border rounded p-3 h-100"><strong>🔔 Notifications</strong><ul class="mb-0 mt-2"><li>Email notifications</li><li>System alerts</li><li>Approval reminders</li></ul></div></div>
                         <div class="col"><div class="border rounded p-3 h-100"><strong>🔐 Security & Compliance</strong><ul class="mb-0 mt-2"><li>Password encryption</li><li>CSRF protection (application layer)</li><li>RBAC enforcement</li><li>Audit logs</li></ul></div></div>
                     </div>
                 </div>

@@ -33,3 +33,26 @@ function roleCan(string $role, array $allowed): bool
 {
     return in_array($role, $allowed, true);
 }
+
+function csrfToken(): string
+{
+    if (!isset($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+function csrfField(): string
+{
+    return '<input type="hidden" name="csrf_token" value="' . e(csrfToken()) . '">';
+}
+
+function verifyCsrf(?string $token): bool
+{
+    if (!isset($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token'])) {
+        return false;
+    }
+
+    return is_string($token) && hash_equals($_SESSION['csrf_token'], $token);
+}
