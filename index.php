@@ -111,6 +111,11 @@ function badgeClass(string $status): string
         default => 'secondary',
     };
 }
+
+function pct(float $value, int $precision = 1): string
+{
+    return number_format($value, $precision) . '%';
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -188,12 +193,52 @@ function badgeClass(string $status): string
                 $activeLeaves = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_leaves WHERE status='Pending'")['c'] ?? 0;
                 $todayPresence = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_attendance WHERE attendance_date = CURDATE() AND status='Present'")['c'] ?? 0;
                 $monthlyPayroll = $wpdb->get_row("SELECT COALESCE(SUM(net_salary),0) AS s FROM hr_payroll WHERE DATE_FORMAT(pay_period, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')")['s'] ?? 0;
+                $activeEmployees = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_employees WHERE status='Active'")['c'] ?? 0;
+                $todayAttendanceTotal = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_attendance WHERE attendance_date = CURDATE()")['c'] ?? 0;
+                $leaveApprovedThisMonth = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_leaves WHERE status='Approved' AND DATE_FORMAT(updated_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')")['c'] ?? 0;
+                $presentRate = $todayAttendanceTotal > 0 ? ((float) $todayPresence / (float) $todayAttendanceTotal) * 100 : 0;
+                $activeRate = $totalEmployees > 0 ? ((float) $activeEmployees / (float) $totalEmployees) * 100 : 0;
+                $monthlyPayrollAvg = $totalEmployees > 0 ? (float) $monthlyPayroll / (float) $totalEmployees : 0;
             ?>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><h6>Total Staff</h6><h3><?= e((string) $totalEmployees) ?></h3></div></div></div>
-                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><h6>Pending Leaves</h6><h3><?= e((string) $activeLeaves) ?></h3></div></div></div>
-                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><h6>Today Present</h6><h3><?= e((string) $todayPresence) ?></h3></div></div></div>
-                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><h6>Monthly Payroll</h6><h3>$<?= number_format((float) $monthlyPayroll, 0) ?></h3></div></div></div>
+                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><small class="text-uppercase fw-semibold">Total Staff</small><h3 class="mt-1 mb-0"><?= e((string) $totalEmployees) ?></h3><small class="text-white-50">Active: <?= e((string) $activeEmployees) ?> (<?= pct($activeRate) ?>)</small></div></div></div>
+                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><small class="text-uppercase fw-semibold">Pending Leaves</small><h3 class="mt-1 mb-0"><?= e((string) $activeLeaves) ?></h3><small class="text-white-50">Approved this month: <?= e((string) $leaveApprovedThisMonth) ?></small></div></div></div>
+                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><small class="text-uppercase fw-semibold">Today Present</small><h3 class="mt-1 mb-0"><?= e((string) $todayPresence) ?></h3><small class="text-white-50">Attendance coverage: <?= pct($presentRate) ?></small></div></div></div>
+                    <div class="col-md-3"><div class="card stat-card"><div class="card-body"><small class="text-uppercase fw-semibold">Monthly Payroll</small><h3 class="mt-1 mb-0">$<?= number_format((float) $monthlyPayroll, 0) ?></h3><small class="text-white-50">Avg / employee: $<?= number_format($monthlyPayrollAvg, 0) ?></small></div></div></div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-8">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Workforce Health Snapshot</h5>
+                                    <span class="badge text-bg-light border">Live KPI</span>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small mb-1"><span>Active Workforce Ratio</span><strong><?= pct($activeRate) ?></strong></div>
+                                    <div class="progress" role="progressbar" aria-label="Active Workforce Ratio"><div class="progress-bar bg-success" style="width: <?= max(0, min(100, $activeRate)) ?>%"></div></div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small mb-1"><span>Today's Presence Ratio</span><strong><?= pct($presentRate) ?></strong></div>
+                                    <div class="progress" role="progressbar" aria-label="Today's Presence Ratio"><div class="progress-bar bg-info" style="width: <?= max(0, min(100, $presentRate)) ?>%"></div></div>
+                                </div>
+                                <div class="small text-muted">KPIs are computed from live attendance, leave, payroll, and employee records to support daily staffing decisions.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h5>Quick Actions</h5>
+                                <div class="d-grid gap-2">
+                                    <a class="btn btn-outline-primary btn-sm text-start" href="index.php?page=employees"><i class="fa fa-user-plus me-2"></i>Onboard Employee</a>
+                                    <a class="btn btn-outline-primary btn-sm text-start" href="index.php?page=attendance"><i class="fa fa-clock me-2"></i>Mark Attendance</a>
+                                    <a class="btn btn-outline-primary btn-sm text-start" href="index.php?page=leaves"><i class="fa fa-calendar-check me-2"></i>Review Leave Queue</a>
+                                    <a class="btn btn-outline-primary btn-sm text-start" href="index.php?page=payroll"><i class="fa fa-file-invoice-dollar me-2"></i>Run Payroll Entry</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -234,10 +279,25 @@ function badgeClass(string $status): string
             </div>
             <div class="card shadow-sm">
                 <div class="card-body table-responsive">
+                    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                        <div class="input-group" style="max-width: 340px;">
+                            <span class="input-group-text bg-white"><i class="fa fa-search text-muted"></i></span>
+                            <input type="search" id="employeeSearch" class="form-control" placeholder="Search name, email, code, position...">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <select id="employeeStatusFilter" class="form-select">
+                                <option value="">All status</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                            <button class="btn btn-light border" id="employeeResetFilters" type="button">Reset</button>
+                        </div>
+                    </div>
                     <table class="table table-hover" id="dataTable">
                         <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>Position</th><th>Status</th></tr></thead>
-                        <tbody><?php foreach ($employees as $emp): ?><tr><td><?= e($emp['employee_code']) ?></td><td><?= e($emp['full_name']) ?><br><small class="text-muted"><?= e($emp['email']) ?></small></td><td><?= e((string) $emp['department']) ?></td><td><?= e($emp['position']) ?></td><td><span class="badge bg-<?= badgeClass($emp['status']) ?>"><?= e($emp['status']) ?></span></td></tr><?php endforeach; ?></tbody>
+                        <tbody><?php foreach ($employees as $emp): ?><tr data-search="<?= e(strtolower($emp['employee_code'] . ' ' . $emp['full_name'] . ' ' . $emp['email'] . ' ' . $emp['position'] . ' ' . ($emp['department'] ?? ''))) ?>" data-status="<?= e($emp['status']) ?>"><td><?= e($emp['employee_code']) ?></td><td><?= e($emp['full_name']) ?><br><small class="text-muted"><?= e($emp['email']) ?></small></td><td><?= e((string) $emp['department']) ?></td><td><?= e($emp['position']) ?></td><td><span class="badge bg-<?= badgeClass($emp['status']) ?>"><?= e($emp['status']) ?></span></td></tr><?php endforeach; ?></tbody>
                     </table>
+                    <div class="small text-muted" id="employeeTableMeta">Showing <?= count($employees) ?> employee records.</div>
                 </div>
             </div>
             <?php endif; ?>
@@ -307,21 +367,28 @@ function badgeClass(string $status): string
                     <input type="hidden" name="action" value="payroll_add">
                     <div class="col-md-3"><select name="employee_id" class="form-select" required><?php foreach ($employees as $e): ?><option value="<?= (int)$e['id'] ?>"><?= e($e['full_name']) ?></option><?php endforeach; ?></select></div>
                     <div class="col-md-2"><input type="month" name="pay_period" class="form-control" required></div>
-                    <div class="col-md-2"><input type="number" step="0.01" name="basic_salary" class="form-control" placeholder="Basic" required></div>
-                    <div class="col-md-2"><input type="number" step="0.01" name="allowance" class="form-control" placeholder="Allowance" required></div>
-                    <div class="col-md-2"><input type="number" step="0.01" name="deduction" class="form-control" placeholder="Deduction" required></div>
+                    <div class="col-md-2"><input type="number" step="0.01" name="basic_salary" id="basicSalary" class="form-control" placeholder="Basic" required></div>
+                    <div class="col-md-2"><input type="number" step="0.01" name="allowance" id="allowanceSalary" class="form-control" placeholder="Allowance" required></div>
+                    <div class="col-md-2"><input type="number" step="0.01" name="deduction" id="deductionSalary" class="form-control" placeholder="Deduction" required></div>
                     <div class="col-md-1"><button class="btn btn-primary w-100">Save</button></div>
                 </form>
+                <div class="alert alert-primary-subtle border mt-3 mb-0 py-2">
+                    Estimated Net Salary: <strong id="estimatedNetSalary">$0.00</strong>
+                </div>
             </div></div>
             <div class="card shadow-sm"><div class="card-body table-responsive"><table class="table"><thead><tr><th>Employee</th><th>Period</th><th>Basic</th><th>Allow.</th><th>Deduct.</th><th>Net</th></tr></thead><tbody><?php foreach ($payroll as $p): ?><tr><td><?= e($p['full_name']) ?></td><td><?= e($p['pay_period']) ?></td><td>$<?= number_format((float) $p['basic_salary'], 2) ?></td><td>$<?= number_format((float) $p['allowance'], 2) ?></td><td>$<?= number_format((float) $p['deduction'], 2) ?></td><td><strong>$<?= number_format((float) $p['net_salary'], 2) ?></strong></td></tr><?php endforeach; ?></tbody></table></div></div>
             <?php endif; ?>
 
             <?php if ($page === 'reports'):
                 $departmentBreakdown = $wpdb->get_results('SELECT d.name, COUNT(e.id) total FROM hr_departments d LEFT JOIN hr_employees e ON e.department_id=d.id GROUP BY d.id ORDER BY total DESC');
+                $maxDepartmentSize = 0;
+                foreach ($departmentBreakdown as $deptRow) {
+                    $maxDepartmentSize = max($maxDepartmentSize, (int) $deptRow['total']);
+                }
             ?>
             <div class="card shadow-sm"><div class="card-body">
                 <h5>Department Workforce Distribution</h5>
-                <table class="table"><thead><tr><th>Department</th><th>Total Employees</th></tr></thead><tbody><?php foreach ($departmentBreakdown as $row): ?><tr><td><?= e($row['name']) ?></td><td><?= e((string)$row['total']) ?></td></tr><?php endforeach; ?></tbody></table>
+                <table class="table align-middle"><thead><tr><th>Department</th><th style="width: 50%;">Distribution</th><th>Total Employees</th></tr></thead><tbody><?php foreach ($departmentBreakdown as $row): $width = $maxDepartmentSize > 0 ? (((int)$row['total'] / $maxDepartmentSize) * 100) : 0; ?><tr><td><?= e($row['name']) ?></td><td><div class="progress" role="progressbar" aria-label="<?= e($row['name']) ?> distribution"><div class="progress-bar" style="width: <?= $width ?>%"></div></div></td><td><strong><?= e((string)$row['total']) ?></strong></td></tr><?php endforeach; ?></tbody></table>
                 <p class="text-muted mb-0">Additional extensible modules to add next: recruitment ATS, onboarding workflows, appraisal cycles, training LMS, compliance audits, asset assignment, and employee self-service API.</p>
             </div></div>
             <?php endif; ?>

@@ -16,6 +16,7 @@ body {
   border-radius: 1rem;
   color: #fff;
   background: linear-gradient(135deg, var(--brand), #7c3aed);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, .25);
 }
 
 aside .nav-link {
@@ -31,4 +32,24 @@ aside .nav-link:hover {
 
 .card {
   border-radius: 1rem;
+  border-color: #eef2ff;
+}
+
+.progress {
+  height: .65rem;
+  border-radius: 999px;
+  background: #eef2ff;
+}
+
+.table > :not(caption) > * > * {
+  vertical-align: middle;
+}
+
+.btn-outline-primary {
+  border-color: #d6dbff;
+}
+
+#employeeSearch:focus,
+#employeeStatusFilter:focus {
+  box-shadow: 0 0 0 .2rem rgba(79, 70, 229, .12);
 }
