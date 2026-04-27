@@ -35,6 +35,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('index.php?page=login');
     }
 
+    if ($action === 'register') {
+        $fullName = trim($_POST['full_name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['password_confirm'] ?? '';
+
+        if ($password !== $confirmPassword) {
+            flash('Password confirmation does not match.', 'danger');
+            redirect('index.php?page=register');
+        }
+
+        if (strlen($password) < 8) {
+            flash('Password must be at least 8 characters long.', 'danger');
+            redirect('index.php?page=register');
+        }
+
+        if (registerUser($wpdb, $fullName, $email, $password)) {
+            flash('Registration successful. You can now sign in.');
+            redirect('index.php?page=login');
+        }
+
+        flash('Registration failed. The email may already be in use or the details are invalid.', 'danger');
+        redirect('index.php?page=register');
+    }
+
     requireAuth();
 
     if ($action === 'employee_create' && roleCan($user['role_name'], ['Admin', 'HR'])) {
@@ -133,9 +158,11 @@ function pct(float $value, int $precision = 1): string
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="bg-light">
-<?php if (!$user && $page !== 'login'): redirect('index.php?page=login'); endif; ?>
+<?php if (!$user && !in_array($page, ['login', 'register'], true)): redirect('index.php?page=login'); endif; ?>
 
-<?php if ($page === 'login'): ?>
+<?php if ($page === 'login' || $page === 'register'):
+    $userCount = (int) ($wpdb->get_row('SELECT COUNT(*) AS c FROM hr_users')['c'] ?? 0);
+?>
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-5">
@@ -146,20 +173,51 @@ function pct(float $value, int $precision = 1): string
                     <?php if ($flash): ?>
                         <div class="alert alert-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
                     <?php endif; ?>
-                    <form method="post">
-                        <?= csrfField() ?>
-                        <input type="hidden" name="action" value="login">
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" required>
-                        </div>
-                        <button class="btn btn-primary w-100">Login</button>
-                    </form>
-                    <p class="small text-muted mt-3 mb-0">Default admin: admin@company.com / password</p>
+                    <?php if ($page === 'login'): ?>
+                        <form method="post">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="login">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" name="password" class="form-control" required>
+                            </div>
+                            <button class="btn btn-primary w-100">Login</button>
+                        </form>
+                        <p class="small text-muted mt-3 mb-1">No account yet? <a href="index.php?page=register">Register here</a>.</p>
+                        <?php if ($userCount === 0): ?>
+                            <p class="small text-primary mb-0">The first registered account is automatically assigned the Admin role.</p>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php if ($page === 'register'): ?>
+                        <form method="post">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="register">
+                            <div class="mb-3">
+                                <label class="form-label">Full name</label>
+                                <input type="text" name="full_name" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" name="password" class="form-control" minlength="8" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Confirm password</label>
+                                <input type="password" name="password_confirm" class="form-control" minlength="8" required>
+                            </div>
+                            <button class="btn btn-primary w-100">Create account</button>
+                        </form>
+                        <p class="small text-muted mt-3 mb-1">Already have an account? <a href="index.php?page=login">Back to login</a>.</p>
+                        <p class="small text-primary mb-0">The first registered account is automatically assigned the Admin role.</p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

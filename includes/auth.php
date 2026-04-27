@@ -41,6 +41,34 @@ function loginUser(wpdb $wpdb, string $email, string $password): bool
     return true;
 }
 
+function registerUser(wpdb $wpdb, string $fullName, string $email, string $password): bool
+{
+    if ($fullName === '' || $email === '' || $password === '') {
+        return false;
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $existingUserSql = $wpdb->prepare('SELECT id FROM hr_users WHERE email = %s LIMIT 1', [$email]);
+    $existingUser = $wpdb->get_row($existingUserSql);
+    if ($existingUser) {
+        return false;
+    }
+
+    $totalUsers = (int) ($wpdb->get_row('SELECT COUNT(*) AS c FROM hr_users')['c'] ?? 0);
+    $roleId = $totalUsers === 0 ? 1 : 5; // First account becomes Admin, all following accounts default to Employee.
+
+    return $wpdb->insert('hr_users', [
+        'full_name' => $fullName,
+        'email' => $email,
+        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'role_id' => $roleId,
+        'is_active' => 1,
+    ]);
+}
+
 function logoutUser(): void
 {
     $_SESSION = [];

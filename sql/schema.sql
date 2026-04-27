@@ -539,7 +539,3 @@ INSERT IGNORE INTO hr_permissions (id,module_key,action_key,description) VALUES
 (8,'documents','manage','Manage document storage'),
 (9,'reports','view','View analytics and reports'),
 (10,'settings','manage','Manage system settings');
-
-INSERT IGNORE INTO hr_users (id, full_name, email, password_hash, role_id, is_active)
-VALUES (1, 'System Administrator', 'admin@company.com', '$2y$10$4p30VvGQkXjgp0YhG65J6uEpgVUQw0xNQSa8CaIrScMvwYXAWi8rS', 1, 1);
--- password: password

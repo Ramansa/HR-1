@@ -125,6 +125,7 @@ A complete standalone HR system designed for companies with up to 1000 staff. It
    ```
 4. Open `http://localhost:8000/index.php?page=login`
 
-## Demo login
-- Email: `admin@company.com`
-- Password: `password`
+## First-time access
+- Open `http://localhost:8000/index.php?page=register`
+- The **very first** registered user is automatically assigned the **Admin** role.
+- Every user registered afterwards is assigned the **Employee** role by default.
