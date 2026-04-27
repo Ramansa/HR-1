@@ -260,7 +260,7 @@ function pct(float $value, int $precision = 1): string
                 $monthlyPayroll = $wpdb->get_row("SELECT COALESCE(SUM(net_salary),0) AS s FROM hr_payroll WHERE DATE_FORMAT(pay_period, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')")['s'] ?? 0;
                 $activeEmployees = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_employees WHERE status='Active'")['c'] ?? 0;
                 $todayAttendanceTotal = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_attendance WHERE attendance_date = CURDATE()")['c'] ?? 0;
-                $leaveApprovedThisMonth = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_leaves WHERE status='Approved' AND DATE_FORMAT(updated_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')")['c'] ?? 0;
+                $leaveApprovedThisMonth = $wpdb->get_row("SELECT COUNT(*) AS c FROM hr_leaves WHERE status='Approved' AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')")['c'] ?? 0;
                 $presentRate = $todayAttendanceTotal > 0 ? ((float) $todayPresence / (float) $todayAttendanceTotal) * 100 : 0;
                 $activeRate = $totalEmployees > 0 ? ((float) $activeEmployees / (float) $totalEmployees) * 100 : 0;
                 $monthlyPayrollAvg = $totalEmployees > 0 ? (float) $monthlyPayroll / (float) $totalEmployees : 0;
